@@ -1,0 +1,8 @@
+.idea/
+
+*.mod*
+*.ko*
+*.symvers
+*.order
+*.o
+*.cmd
