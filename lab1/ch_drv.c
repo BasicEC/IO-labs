@@ -36,14 +36,16 @@ void make_file_name(char* start, char* file_name) {
         file_name[i] = start[i];
         i++;
     }
-    file_name[i] = 0;
+    file_name[i - 1] = 0; // i don't know why, but user input ends with one special symbol so i ignore it here and in the parse()
+    printk(KERN_INFO "Driver: make_file_name rezult: name: %s, name_len: %d\n", file_name, i);
 }
 
 void parse(char *str, size_t len, input_t *input) {
     int i = 0;
     input->first = 0;
     input->second = 0;
-    printk(KERN_INFO "Driver: parse()\n");
+    input->error = 0;
+    printk(KERN_INFO "Driver: parse(%s, %ld, *input)\n", str, len);
     switch (str[0]) {
         case 'o':
             if (len > 5 && str[1] == 'p' && str[2] == 'e' && str[3] == 'n' && str[4] == ' ') {
@@ -61,6 +63,7 @@ void parse(char *str, size_t len, input_t *input) {
             return;
     }
 
+    printk(KERN_INFO "Driver: parse() : line 66\n");
     while (i < len) {
         if (str[i] >= '0' && str[i] <= '9') input->first = input->first * 10 + str[i++] - '0';
         else {
@@ -71,25 +74,21 @@ void parse(char *str, size_t len, input_t *input) {
 
             if (str[i] == '+') {
                 input->command = 3;
-                i++;
                 break;
             }
 
             if (str[i] == '-') {
                 input->command = 4;
-                i++;
                 break;
             }
 
             if (str[i] == '*') {
                 input->command = 5;
-                i++;
                 break;
             }
 
             if (str[i] == '/') {
                 input->command = 6;
-                i++;
                 break;
             }
 
@@ -97,15 +96,19 @@ void parse(char *str, size_t len, input_t *input) {
             return;
         }
     }
+    i++;
 
+    printk(KERN_INFO "Driver: parse() : line 100; first = %d; command = %d; i = %d;\n", input->first, input->command, i);
     if (i >= len) {
         input->error = -1;
         return;
     }
 
-    while (i < len) {
+    printk(KERN_INFO "Driver: parse() : line 106\n");
+    while (i < len - 1) { // i don't know why, but user input ends with one special symbol so i ignore it here and in the make_file_name()
         if (str[i] >= '0' && str[i] <= '9') input->second = input->second * 10 + str[i++] - '0';
         else {
+            printk(KERN_INFO "Driver: parse() : line 110; wrong char: %c\n", str[i]);
             input->error = -1;
             return;
         }
@@ -124,20 +127,33 @@ static int my_close(struct inode *i, struct file *f) {
 }
 
 static ssize_t my_read(struct file *f, char __user *buf, size_t len, loff_t *off) {
-    char data [] = "Data from kernel module\n";
-    size_t rlen = strlen(data);
+    char* data;
+    ssize_t rlen;
+    mm_segment_t old_fs = get_fs();
+    data = kmalloc(len, GFP_USER);
+    clean(data, len);
 
-    printk(KERN_INFO "Driver: read()\n");
+    printk(KERN_INFO "Driver: read(): user asks len: %ld;\n", len);
 
-    if(*off != rlen)
-    *off = rlen;
-    else
-    return 0;
+    set_fs(KERNEL_DS);
+    rlen = vfs_read(test_file, data, len, off);
+    set_fs(old_fs);
 
-    if(copy_to_user(buf, data, rlen) != 0) {
-    return -EFAULT;
+    if (rlen <= 0) {
+        kfree(data);
+        printk(KERN_INFO "Driver: read(): rlen <= 0: %ld \n", rlen);
+        return rlen;
     }
 
+    printk(KERN_INFO "Driver: read(): rlen: %ld\n", rlen);
+    printk(KERN_INFO "Driver: read(): file data:\n%s", data);
+
+    if(copy_to_user(buf, data, rlen) != 0) {
+        kfree(data);
+        return -EFAULT;
+    }
+
+    kfree(data);
     return rlen;
 }
 
@@ -146,39 +162,49 @@ static ssize_t my_write(struct file *f, const char __user *buf,  size_t len, lof
     size_t wlen = 0;
     char *data;
     char user_data[50];
+    const char* out = (const char*) user_data;
     char file_name[40];
+    mm_segment_t old_fs = get_fs();
 
     clean(user_data, 50);
     clean(file_name, 40);
     printk(KERN_INFO "Driver: my_write()\n");
     if(copy_from_user(user_data, buf, len) != 0) return -EFAULT;
-    printk(KERN_INFO "Driver: user data copied\n");
+    printk(KERN_INFO "Driver: user data copied: \"%s\"\n", out);
 
     parse(user_data, len, &input);
-    if (input.error == -1) printk(KERN_INFO "Driver: CAN'T PARSE\n");
+    if (input.error == -1) {
+        printk(KERN_INFO "Driver: CAN'T PARSE\n");
+        return -EFAULT;
+    }
 
-    printk(KERN_INFO "Driver: PRE SWITCH\n");
     switch (input.command)
     {
     case 1:
+      printk(KERN_INFO "Driver: my_write(): case: 1");
       if (test_file != NULL) {
         printk(KERN_INFO "Driver: ya uzhe otcritiy \n");
-        return -1;
+        return -EFAULT;
       }
       make_file_name(&user_data[5], file_name);
-      printk(KERN_INFO "kekeke");
+      set_fs(KERNEL_DS);
       test_file = filp_open(file_name, O_RDWR|O_CREAT|O_APPEND, 0644);
+      set_fs(old_fs);
       return len;
     case 2:
+      printk(KERN_INFO "Driver: my_write(): case: 2");
       if (test_file == NULL) {
         printk(KERN_INFO "Driver: ya uzhe zakritiy \n");
-        return -1;
+        return -EFAULT;
       }
       test_file = NULL;
       return len;
     }
 
-    if (test_file == NULL) printk(KERN_INFO "Driver: ya esche zakritiy \n");
+    if (test_file == NULL) {
+        printk(KERN_INFO "Driver: ya esche zakritiy \n");
+        return -EFAULT;
+    }
 
     switch (input.command) {
     case 3:
@@ -200,12 +226,10 @@ static ssize_t my_write(struct file *f, const char __user *buf,  size_t len, lof
     sprintf(data, "%d\n", input.rezult);
 
     set_fs(KERNEL_DS);
+    wlen = vfs_write(test_file, data, strlen(data), &test_file->f_pos);
+    set_fs(old_fs);
 
-    wlen = vfs_write(test_file, data, len, &test_file->f_pos);
-
-    set_fs(USER_DS);
-
-    printk(KERN_INFO "Driver: write() len = %ld, %lld\n", len, test_file->f_pos);
+    printk(KERN_INFO "Driver: write() len = %ld, f_pos: %lld\n", len, test_file->f_pos);
     kfree(data);
 
     return len;
