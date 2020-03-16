@@ -1,4 +1,8 @@
 a=$(date +%s%N)
+for (i=0;i<$3;i++)
+do
 cp $1 $2
+rm $2
+done
 b=$(date +%s%N)
 echo $(($b - $a))
