@@ -96,8 +96,8 @@ static const PartTable def_log_part_table[] =
 			end_sec: 0x29,
 			end_head: 0x5,
 			end_cyl: 0xFF,
-			abs_start_sec: 0x1, // neet to conf
-			sec_in_part: 0x4FFF //19000
+			abs_start_sec: 0x1,
+			sec_in_part: 0x4FFF
 		},
 		{
 			boot_type: 0x00,
@@ -108,8 +108,22 @@ static const PartTable def_log_part_table[] =
 			end_sec: 0x29,
 			end_head: 0x7,
 			end_cyl: 0xFF,
-			abs_start_sec: 0x5000, // neet to conf
-			sec_in_part: 0x5000 //19000
+			abs_start_sec: 0x5000,
+			sec_in_part: 0x5000
+		}
+	},
+	{
+		{
+			boot_type: 0x00,
+			start_head: 0x6,
+			start_sec: 0x1,
+			start_cyl: 0x0,
+			part_type: 0x83, // extended partition type
+			end_sec: 0x29,
+			end_head: 0x7,
+			end_cyl: 0xFF,
+			abs_start_sec: 0x1,
+			sec_in_part: 0x4FFF
 		},
 		{
 			boot_type: 0x00,
@@ -120,22 +134,22 @@ static const PartTable def_log_part_table[] =
 			end_sec: 0x29,
 			end_head: 0x9,
 			end_cyl: 0xFF,
-			abs_start_sec: 0xF000, // neet to conf
-			sec_in_part: 0x5000 //19000
+			abs_start_sec: 0xA000,
+			sec_in_part: 0x5000
 		}
 	},
 	{
 		{
 			boot_type: 0x00,
-			start_sec: 0x2,
-			start_head: 0x0,
-			start_cyl: 0x0, //
-			part_type: 0x83,
-			end_head: 0x3,
-			end_sec: 0x2A, //
+			start_head: 0x8,
+			start_sec: 0x1,
+			start_cyl: 0x0,
+			part_type: 0x83, // extended partition type
+			end_sec: 0x29,
+			end_head: 0x9,
 			end_cyl: 0xFF,
 			abs_start_sec: 0x1,
-			sec_in_part: 0xA000 // 20Mbyte
+			sec_in_part: 0x4FFF
 		}
 	}
 };
