@@ -101,8 +101,8 @@ static const PartTable def_log_part_table[] =
 		},
 		{
 			boot_type: 0x00,
-			start_head: 0x6,
 			start_sec: 0x01,
+			start_head: 0x6,
 			start_cyl: 0x00,
 			part_type: 0x83,
 			end_head: 0x7,
@@ -113,8 +113,8 @@ static const PartTable def_log_part_table[] =
 		},
 		{
 			boot_type: 0x00,
-			start_head: 0x8,
 			start_sec: 0x01,
+			start_head: 0x8,
 			start_cyl: 0x00,
 			part_type: 0x83,
 			end_head: 0xb,
