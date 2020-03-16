@@ -120,22 +120,22 @@ static const PartTable def_log_part_table[] =
 			end_sec: 0x29,
 			end_head: 0x9,
 			end_cyl: 0xFF,
-			abs_start_sec: 0x001, // neet to conf
+			abs_start_sec: 0x14001, // neet to conf
 			sec_in_part: 0x5000 //19000
 		}
 	},
 	{
 		{
 			boot_type: 0x00,
-			start_head: 0x8,
-			start_sec: 0x02,
-			start_cyl: 0x00,
+			start_sec: 0x2,
+			start_head: 0x0,
+			start_cyl: 0x0, //
 			part_type: 0x83,
-			end_head: 0xB,
-			end_sec: 0x20,
-			end_cyl: 0x9F,
+			end_head: 0x3,
+			end_sec: 0x2A, //
+			end_cyl: 0xFF,
 			abs_start_sec: 0x1,
-			sec_in_part: 0x4FFF
+			sec_in_part: 0xA000 // 20Mbyte
 		}
 	}
 };
