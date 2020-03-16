@@ -117,23 +117,11 @@ static const PartTable def_log_part_table[] =
 			start_sec: 0x01,
 			start_cyl: 0x00,
 			part_type: 0x83,
-			end_head: 0x9,
+			end_head: 0xb,
 			end_sec: 0x20,
 			end_cyl: 0x9F,
 			abs_start_sec: 0x5000,
-			sec_in_part: 0x2800
-		},
-		{
-			boot_type: 0x00,
-			start_head: 0xA,
-			start_sec: 0x01,
-			start_cyl: 0x00,
-			part_type: 0x05,
-			end_head: 0xB,
-			end_sec: 0x20,
-			end_cyl: 0x9F,
-			abs_start_sec: 0x7800,
-			sec_in_part: 0x2800
+			sec_in_part: 0x5000
 		}
 	},
 	{
