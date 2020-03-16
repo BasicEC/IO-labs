@@ -68,7 +68,7 @@ static PartTable def_part_table =
 		end_sec: 0x2A, //
 		end_cyl: 0xFF,
 		abs_start_sec: 0x1,
-		sec_in_part: 0xA000 // 20Mbyte
+		sec_in_part: 0x9FFF // 20Mbyte
 	},
 	{
 		boot_type: 0x00,
@@ -79,11 +79,11 @@ static PartTable def_part_table =
 		end_sec: 0x29,
 		end_head: 0x9,
 		end_cyl: 0xFF,
-		abs_start_sec: 0xA001,
+		abs_start_sec: 0xA000,
 		sec_in_part: 0xF000 //19000
 	}
 };
-static unsigned int def_log_part_br_abs_start_sector[] = {0x4, 0x6, 0x8};
+static unsigned int def_log_part_br_abs_start_sector[] = {0xA000, 0xF000, 0x14000};
 static const PartTable def_log_part_table[] =
 {
 	{
