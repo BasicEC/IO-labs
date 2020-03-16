@@ -1,0 +1,4 @@
+a=$(date +%s%N)
+cp $1 $2
+b=$(date +%s%N)
+echo $(($b - $a))
