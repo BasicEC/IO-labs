@@ -2,9 +2,8 @@ CURRENT = $(shell uname -r)
 KDIR = /lib/modules/$(CURRENT)/build
 PWD = $(shell pwd)
 
-TARGET1 = virt
-TARGET2 = virtl
-obj-m := $(TARGET1).o $(TARGET2).o 
+TARGET = virt
+obj-m := $(TARGET).o 
 
 all: default clean
 
@@ -18,5 +17,5 @@ clean:
 	@rm -rf .tmp_versions
 
 disclean: clean
-	@rm -f *.ko
+	@rm -f $(TARGET).ko
 
