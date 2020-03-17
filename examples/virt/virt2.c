@@ -20,8 +20,22 @@ struct priv {
    struct net_device *parent;
 };
 
+static char* strIP( u32 addr ) {     // диагностика IP в точечной нотации
+   static char saddr[ MAX_ADDR_LEN ];
+   sprintf( saddr, "%d.%d.%d.%d",
+            ( addr ) & 0xFF, ( addr >> 8 ) & 0xFF,
+            ( addr >> 16 ) & 0xFF, ( addr >> 24 ) & 0xFF
+          );
+   return saddr;
+}
+
 static rx_handler_result_t handle_frame( struct sk_buff **pskb ) {
    struct sk_buff *skb = *pskb;
+   if( skb->protocol == htons( ETH_P_IP ) ) {
+      struct iphdr *ip = ip_hdr( skb );
+      char *addr = strIP( ip->daddr );
+      LOG( "rx: IP4 to IP=%s", addr );
+   }
    if( child ) {
       child->stats.rx_packets++;
       child->stats.rx_bytes += skb->len;
