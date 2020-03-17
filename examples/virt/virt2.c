@@ -66,6 +66,11 @@ static netdev_tx_t start_xmit( struct sk_buff *skb, struct net_device *dev ) {
    struct priv *priv = netdev_priv( dev );
    child->stats.tx_packets++;
    child->stats.tx_bytes += skb->len;
+   if( skb->protocol == htons( ETH_P_IP ) ) {
+      struct iphdr *ip = ip_hdr( skb );
+      char *addr = strIP( ip->daddr );
+      LOG( "tx: IP4 to IP=%s", addr );
+   }
    if( priv->parent ) {
       skb->dev = priv->parent;
       skb->priority = 1;
