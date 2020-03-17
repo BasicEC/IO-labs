@@ -4,6 +4,8 @@
 #include <linux/etherdevice.h>
 #include <linux/moduleparam.h>
 #include <net/arp.h>
+#include <linux/inetdevice.h>
+#include <linux/ip.h> 
 
 #define ERR(...) printk( KERN_ERR "! "__VA_ARGS__ )
 #define LOG(...) printk( KERN_INFO "! "__VA_ARGS__ )
