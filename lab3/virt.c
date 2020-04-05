@@ -34,33 +34,31 @@ struct priv {
    struct net_device *parent;
 };
 
+static void parse_ip(uint32_t ip, uint8_t* result) {
+	result[0] = ip % 256;
+	ip /= 256;
+	result[1] = ip % 256;
+	ip /= 256;
+	result[2] = ip % 256;
+	ip /= 256;
+	result[3] = ip % 256;
+}
+
 static unsigned int hfunc(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
 {
 	struct iphdr *iph;
+	uint8_t buf[4];
 	if (!skb)
 		return NF_ACCEPT;
 
 	iph = ip_hdr(skb);
-	/*if (iph->protocol == IPPROTO_UDP) {
-		udph = udp_hdr(skb);
-		if (ntohs(udph->dest) == 53) {
-            if (udph->dest == 13568) {
-                printk(KERN_INFO "SRC port %lu", (unsigned long)udph->source);
-                printk(KERN_INFO "DST port %lu", (unsigned long)udph->dest);
-			    return NF_ACCEPT;
-            }
-		}
+	if (iph->saddr == 4211081440 | iph->daddr == 4211081440) {
+	parse_ip(iph->saddr, buf);
+	printk(KERN_INFO "SRC ip addr %u.%u.%u.%u, %u\n", buf[0], buf[1], buf[2], buf[3], iph->saddr);
+	parse_ip(iph->daddr, buf);
+	printk(KERN_INFO "DST ip addr %u.%u.%u.%u, %u\n", buf[0], buf[1], buf[2], buf[3], iph->daddr);
 	}
-	else if (iph->protocol == IPPROTO_TCP) {
-         printk(KERN_INFO "SRC port %lu", (unsigned long)udph->source);
-         printk(KERN_INFO "DST port %lu", (unsigned long)udph->dest);
-		return NF_ACCEPT;
-	}*/
-
-	printk(KERN_INFO "SRC port %lu", (unsigned long)iph->ip_src);
-   printk(KERN_INFO "DST port %lu", (unsigned long)iph->ip_dst);
    return NF_ACCEPT;
-	/*return NF_DROP;*/
 }
 
 static rx_handler_result_t handle_frame( struct sk_buff **pskb ) {
@@ -68,7 +66,7 @@ static rx_handler_result_t handle_frame( struct sk_buff **pskb ) {
    if( child ) {
       child->stats.rx_packets++;
       child->stats.rx_bytes += skb->len;
-      LOG( "rx: injecting frame from %s to %s", skb->dev->name, child->name );
+//      LOG( "rx: injecting frame from %s to %s", skb->dev->name, child->name );
       skb->dev = child;
       /* netif_receive_skb(skb);
       return RX_HANDLER_CONSUMED; */
@@ -97,7 +95,7 @@ static netdev_tx_t start_xmit( struct sk_buff *skb, struct net_device *dev ) {
       skb->dev = priv->parent;
       skb->priority = 1;
       dev_queue_xmit( skb );
-      LOG( "tx: injecting frame from %s to %s", dev->name, skb->dev->name );
+//      LOG( "tx: injecting frame from %s to %s", dev->name, skb->dev->name );
       return 0;
    }
    return NETDEV_TX_OK;
@@ -193,6 +191,6 @@ void __exit exit( void ) {
 module_init(init);
 module_exit(exit);
 
-MODULE_AUTHOR( "Krasnoperova, Nitser" );
+MODULE_AUTHOR( "Gogiyan, Zakusilo" );
 MODULE_LICENSE( "GPL v2" );
 MODULE_VERSION( "2.1" );
