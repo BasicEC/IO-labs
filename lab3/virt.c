@@ -1,43 +1,70 @@
+/*****************************************************
+ * This code was compiled and tested on Ubuntu 18.04.1
+ * with kernel version 4.15.0
+ *****************************************************/
+
+#include <linux/init.h>
 #include <linux/module.h>
-#include <linux/version.h>
+#include <linux/kernel.h>
+#include <linux/netfilter.h>
+#include <linux/netfilter_ipv4.h>
+#include <linux/ip.h>
+#include <linux/tcp.h>
+#include <linux/udp.h>
+
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
 #include <linux/moduleparam.h>
 #include <net/arp.h>
-#include <linux/inetdevice.h>
-#include <linux/ip.h> 
+#include <linux/version.h>
 
 #define ERR(...) printk( KERN_ERR "! "__VA_ARGS__ )
 #define LOG(...) printk( KERN_INFO "! "__VA_ARGS__ )
 
-static char* link = "eth0";
+static char* link = "enp0s3";
 module_param( link, charp, 0 );
 
 static char* ifname = "virt"; 
 module_param( ifname, charp, 0 );
 
 static struct net_device *child = NULL;
+static struct nf_hook_ops *nfho = NULL;
 
 struct priv {
    struct net_device *parent;
 };
 
-static char* strIP( u32 addr ) {     // диагностика IP в точечной нотации
-   static char saddr[ MAX_ADDR_LEN ];
-   sprintf( saddr, "%d.%d.%d.%d",
-            ( addr ) & 0xFF, ( addr >> 8 ) & 0xFF,
-            ( addr >> 16 ) & 0xFF, ( addr >> 24 ) & 0xFF
-          );
-   return saddr;
+static unsigned int hfunc(void *priv, struct sk_buff *skb, const struct nf_hook_state *state)
+{
+	struct iphdr *iph;
+	if (!skb)
+		return NF_ACCEPT;
+
+	iph = ip_hdr(skb);
+	/*if (iph->protocol == IPPROTO_UDP) {
+		udph = udp_hdr(skb);
+		if (ntohs(udph->dest) == 53) {
+            if (udph->dest == 13568) {
+                printk(KERN_INFO "SRC port %lu", (unsigned long)udph->source);
+                printk(KERN_INFO "DST port %lu", (unsigned long)udph->dest);
+			    return NF_ACCEPT;
+            }
+		}
+	}
+	else if (iph->protocol == IPPROTO_TCP) {
+         printk(KERN_INFO "SRC port %lu", (unsigned long)udph->source);
+         printk(KERN_INFO "DST port %lu", (unsigned long)udph->dest);
+		return NF_ACCEPT;
+	}*/
+
+	printk(KERN_INFO "SRC port %lu", (unsigned long)iph->ip_src);
+   printk(KERN_INFO "DST port %lu", (unsigned long)iph->ip_dst);
+   return NF_ACCEPT;
+	/*return NF_DROP;*/
 }
 
 static rx_handler_result_t handle_frame( struct sk_buff **pskb ) {
    struct sk_buff *skb = *pskb;
-   if( skb->protocol == htons( ETH_P_IP ) ) {
-      struct iphdr *ip = ip_hdr( skb );
-      char *addr = strIP( ip->daddr );
-      LOG( "rx: IP4 to IP=%s", addr );
-   }
    if( child ) {
       child->stats.rx_packets++;
       child->stats.rx_bytes += skb->len;
@@ -66,11 +93,6 @@ static netdev_tx_t start_xmit( struct sk_buff *skb, struct net_device *dev ) {
    struct priv *priv = netdev_priv( dev );
    child->stats.tx_packets++;
    child->stats.tx_bytes += skb->len;
-   if( skb->protocol == htons( ETH_P_IP ) ) {
-      struct iphdr *ip = ip_hdr( skb );
-      char *addr = strIP( ip->daddr );
-      LOG( "tx: IP4 to IP=%s", addr );
-   }
    if( priv->parent ) {
       skb->dev = priv->parent;
       skb->priority = 1;
@@ -92,9 +114,6 @@ static struct net_device_ops crypto_net_device_ops = {
    .ndo_start_xmit = start_xmit,
 };
 
-// #define MAX_ADDR_LEN    32  <netdev.h>
-// #define ETH_ALEN        6   /* Octets in one ethernet addr   */ <if_ether.h>
-
 static void setup( struct net_device *dev ) {
    int j;
    ether_setup( dev );
@@ -109,11 +128,11 @@ int __init init( void ) {
    struct priv *priv;
    char ifstr[ 40 ];
    sprintf( ifstr, "%s%s", ifname, "%d" );
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 17, 0))
-   child = alloc_netdev( sizeof( struct priv ), ifstr, setup );
-#else
-   child = alloc_netdev( sizeof( struct priv ), ifstr, NET_NAME_UNKNOWN, setup );
-#endif
+   #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 17, 0)
+      child = alloc_netdev( sizeof( struct priv ), ifstr, setup );
+   #else 
+      child = alloc_netdev( sizeof( struct priv ), ifstr,NET_NAME_UNKNOWN, setup );
+   #endif
    if( child == NULL ) {
       ERR( "%s: allocate error", THIS_MODULE->name ); return -ENOMEM;
    }
@@ -137,8 +156,16 @@ int __init init( void ) {
    register_netdev( child );
    rtnl_lock();
    netdev_rx_handler_register( priv->parent, &handle_frame, NULL );
-   netdev_tx_handler_register( priv->parent, &start_xmit, NULL );
    rtnl_unlock();
+   nfho = (struct nf_hook_ops*)kcalloc(1, sizeof(struct nf_hook_ops), GFP_KERNEL);
+	
+	/* Initialize netfilter hook */
+	nfho->hook 	= (nf_hookfn*)hfunc;		/* hook function */
+	nfho->hooknum 	= NF_INET_PRE_ROUTING;		/* received packets */
+	nfho->pf 	= PF_INET;			/* IPv4 */
+	nfho->priority 	= NF_IP_PRI_FIRST;		/* max hook priority */
+	
+	nf_register_net_hook(&init_net, nfho);
    LOG( "module %s loaded", THIS_MODULE->name );
    LOG( "%s: create link %s", THIS_MODULE->name, child->name );
    LOG( "%s: registered rx handler for %s", THIS_MODULE->name, priv->parent->name );
@@ -148,7 +175,7 @@ err:
    return err;
 }
 
-void __exit virt_exit( void ) {
+void __exit exit( void ) {
    struct priv *priv = netdev_priv( child );
    if( priv->parent ) {
       rtnl_lock();
@@ -156,15 +183,16 @@ void __exit virt_exit( void ) {
       rtnl_unlock();
       LOG( "unregister rx handler for %s\n", priv->parent->name );
    }
+   nf_unregister_net_hook(&init_net, nfho);
+   kfree(nfho);
    unregister_netdev( child );
    free_netdev( child );
    LOG( "module %s unloaded", THIS_MODULE->name );
 }
 
-module_init( init );
-module_exit( virt_exit );
+module_init(init);
+module_exit(exit);
 
-MODULE_AUTHOR( "Oleg Tsiliuric" );
-MODULE_AUTHOR( "Nikita Dorokhin" );
+MODULE_AUTHOR( "Krasnoperova, Nitser" );
 MODULE_LICENSE( "GPL v2" );
 MODULE_VERSION( "2.1" );
